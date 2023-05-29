@@ -2,11 +2,11 @@ from setuptools import find_packages, setup
 
 setup(
     name="asynciomultiplexer",
-    version="1.0",
+    version="1.0.1",
     author='John Rusnak',
     author_email='jrusnak69@gmail.com',
     # declare your packages
-    packages=find_packages(where="src", exclude=("test",)),
+    packages=['asynciomultiplexer'],
     package_dir={"": "src"},
     # include data files
     # data_files=data_files,
