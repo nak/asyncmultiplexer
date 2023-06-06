@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="asynciomultiplexer",
-    version="1.0.1",
+    version="1.1.0",
     author='John Rusnak',
     author_email='jrusnak69@gmail.com',
     # declare your packages
