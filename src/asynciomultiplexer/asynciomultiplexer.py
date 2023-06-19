@@ -5,7 +5,7 @@ multiplexing utils for parallel (async) tasks
 import asyncio
 import queue
 from contextlib import suppress
-from typing import AsyncIterator, TypeVar, Generic, Optional, Callable, AsyncGenerator
+from typing import AsyncIterator, TypeVar, Generic, Optional, Coroutine, Callable, Awaitable
 
 __all__ = ["AsyncMultiplexedIterator", "AsyncAdaptorQueue"]
 T = TypeVar('T')
@@ -33,13 +33,13 @@ class AsyncMultiplexedIterator(Generic[T]):
             return self._iterator
 
     def __init__(self, *iterators: AsyncIterator[T], timeout=0,
-                 handle_orphan: Optional[Callable[[T], None]] = None):
+                 handle_orphan: Optional[Callable[[T], Awaitable[None]]] = None):
         """
         :param iterators: which iterators to iterate over in parallel
         :param timeout: timeout in seconds to wait on next item, or default/zero to wait indefinitely
         :param handle_orphan: optional callback to handle orphaned items.  An itme is orphaned when
             the multiplexer exits early but the client inserts an item into the multiplexing queue
-            AFTER the multiplexer stops processing the queue but BEFORE it has properly shutdown
+            AFTER the multiplexer stops processing the queue, but BEFORE it has properly shutdown
             all the workers.  Any exceptions from this handler will be ignored and not propagated.
         """
         self._iterators = list(iterators)
@@ -55,11 +55,13 @@ class AsyncMultiplexedIterator(Generic[T]):
         self._active = False
         for task in [t for t in self._tasks if not t.done()]:
             await task
-        while self._handle_orphan is not None:  # always True or False
+        while self._handle_orphan is not None:  # always either True or False, should never change during lifetime
             try:
                 item = self._multiplexing_q.get_nowait()
+                if isinstance(item, self.Sentinel):
+                    break
                 with suppress(Exception):
-                    self._handle_orphan(item)
+                    await self._handle_orphan(item)
             except asyncio.queues.QueueEmpty:
                 break
 
